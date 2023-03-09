@@ -9,7 +9,7 @@ import (
 
 type ImportLogResponse struct {
 	GUID         string    `json:"guid"`
-	Source       string    `json:"source"`
+	UserGUID     string    `json:"user_guid"`
 	ExecTime     float64   `json:"exec_time"`
 	TotalSuccess int       `json:"total_success"`
 	TotalError   int       `json:"total_error"`
@@ -39,8 +39,8 @@ func ImportLogDetailTransformer(importLog models.ImportLog) (row ImportLogDetail
 	json.Unmarshal(jsonResponse, &row)
 
 	errorLogs := make([]dto.ImportResultDTO, 0)
-	if importLog.Errors != "" && importLog.Errors != "null" {
-		json.Unmarshal([]byte(importLog.Errors), &errorLogs)
+	if importLog.Errors.Valid {
+		json.Unmarshal([]byte(importLog.Errors.String), &errorLogs)
 	}
 
 	row.ErrorLogs = errorLogs

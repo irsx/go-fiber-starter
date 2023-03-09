@@ -1,14 +1,15 @@
 package services
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"go-fiber-starter/app/dto"
-	"go-fiber-starter/app/jobs"
 	"go-fiber-starter/app/models"
 	"go-fiber-starter/app/repository"
 	"go-fiber-starter/app/transformer"
+	"go-fiber-starter/constants"
 	"go-fiber-starter/utils"
 	"go-fiber-starter/utils/sse"
 	"math"
@@ -19,7 +20,6 @@ import (
 
 	"github.com/gammazero/workerpool"
 	"github.com/gofiber/fiber/v2"
-	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
@@ -54,7 +54,12 @@ func (s *ImportService) GetLogDetail(ctx *fiber.Ctx, guid string) error {
 }
 
 func (s *ImportService) ImportProductExcel(ctx *fiber.Ctx, userGUID string) error {
-	rows, err := s.readUploadedExcelFile(ctx, "product_list")
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		return utils.JsonErrorInternal(ctx, err, "E_IMPORT_FILE")
+	}
+
+	rows, err := utils.ReadExcelFile(file, "products")
 	if err != nil {
 		return utils.JsonErrorInternal(ctx, err, "E_IMPORT_READ")
 	}
@@ -66,37 +71,7 @@ func (s *ImportService) ImportProductExcel(ctx *fiber.Ctx, userGUID string) erro
 	})
 }
 
-func (s *ImportService) readUploadedExcelFile(ctx *fiber.Ctx, sheetName string) (*[][]string, error) {
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		return nil, err
-	}
-
-	opened, err := file.Open()
-	if err != nil {
-		return nil, err
-	}
-
-	f, err := excelize.OpenReader(opened)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err := f.Close(); err != nil {
-			utils.Logger.Error("❌ err file close :" + err.Error())
-		}
-	}()
-
-	rows, err := f.GetRows(sheetName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &rows, nil
-}
-
-func (s *ImportService) storeExcelProduct(row []string, index int) dto.ImportResultDTO {
+func (s *ImportService) storeExcelProduct(row []string, index int, userGUID string) dto.ImportResultDTO {
 	var (
 		err       error
 		errorCode string
@@ -108,10 +83,16 @@ func (s *ImportService) storeExcelProduct(row []string, index int) dto.ImportRes
 	err = repository.DB.Transaction(func(tx *gorm.DB) error {
 		if len(row) == 0 {
 			errorCode = "E_IMPORT_PRODUCT_EMPTY_ROW"
-			return errors.New("empty row at index #" + indexStr)
+			return errors.New("empty row at index " + indexStr)
+		}
+
+		if row[3] == "" {
+			errorCode = "E_IMPORT_PRODUCT_SKU"
+			return errors.New("empty sku " + indexStr)
 		}
 
 		storeData := s.storeProductFromExcel(row)
+		storeData.UserGUID = userGUID
 		product, err = productRepo.Insert(tx, storeData)
 		if err != nil {
 			errorCode = "E_IMPORT_PRODUCT_ADD"
@@ -135,7 +116,7 @@ func (s *ImportService) storeExcelProduct(row []string, index int) dto.ImportRes
 	}
 
 	// SEND QUEUE
-	jobs.ProductStreamJob(product)
+	utils.SendJobWithDefaultPayloads(constants.QueueNewProduct, product)
 
 	// utils.Logger.Info("--> ✅ " + indexStr + " import success")
 	return dto.ImportResultDTO{
@@ -162,7 +143,7 @@ func (s *ImportService) importProductExcelRows(rows [][]string, userGUID string)
 		row := row
 		index := index
 		wp.Submit(func() {
-			result := s.storeExcelProduct(row, index)
+			result := s.storeExcelProduct(row, index, userGUID)
 			if result.ErrorCode != "" {
 				resultErrors = append(resultErrors, result)
 			} else {
@@ -178,51 +159,51 @@ func (s *ImportService) importProductExcelRows(rows [][]string, userGUID string)
 	wp.StopWait()
 
 	execTime := math.Round(time.Since(start).Seconds()*100) / 100
-	s.storeImportLog("Product", userGUID, execTime, totalSuccess, resultErrors)
+	s.storeImportLog(userGUID, execTime, totalSuccess, resultErrors)
 
 	utils.Logger.Info(fmt.Sprintf("✅ import excel time: %f seconds", execTime))
 }
 
 func (s *ImportService) storeProductFromExcel(row []string) (Product models.Product) {
-	Product.CreatedAt = time.Now()
-
 	Product.Name = row[0]
 	Product.SKU = row[1]
-	Product.Description = row[2]
+	Product.BarcodeID = row[2]
+	Product.Description = row[3]
 
-	if row[3] != "" {
-		imageList := strings.Split(row[3], ",")
+	if row[4] != "" {
+		imageList := strings.Split(row[4], ",")
 		imageJson, _ := json.Marshal(imageList)
 		Product.Image = string(imageJson)
 	}
 
-	stock, _ := strconv.Atoi(row[4])
+	stock, _ := strconv.Atoi(row[5])
 	Product.Stock = stock
 
-	sellPrice, _ := strconv.ParseFloat(row[5], 64)
+	sellPrice, _ := strconv.ParseFloat(row[6], 64)
 	Product.SellPrice = sellPrice
 
-	buyPrice, _ := strconv.ParseFloat(row[6], 64)
+	buyPrice, _ := strconv.ParseFloat(row[7], 64)
 	Product.BuyPrice = buyPrice
 
-	if len(row) == 7 {
-		Product.ExpiredAt = &row[7]
+	if len(row) == 9 {
+		parseExpiredAt, _ := time.Parse(constants.TimestampFormat, row[8])
+		Product.ExpiredAt = sql.NullTime{Time: parseExpiredAt, Valid: true}
 	} else {
-		Product.ExpiredAt = nil
+		Product.ExpiredAt = sql.NullTime{Valid: false}
 	}
 
+	Product.CreatedAt = time.Now()
 	return Product
 }
 
-func (s *ImportService) storeImportLog(source string, userGUID string, execTime float64, totalSuccess int, resultErrors []dto.ImportResultDTO) {
+func (s *ImportService) storeImportLog(userGUID string, execTime float64, totalSuccess int, resultErrors []dto.ImportResultDTO) {
 	resultErrorBytes, _ := json.Marshal(resultErrors)
 	storeImportLog := models.ImportLog{
 		UserGUID:     userGUID,
-		Source:       source,
 		ExecTime:     execTime,
 		TotalSuccess: totalSuccess,
 		TotalError:   len(resultErrors),
-		Errors:       string(resultErrorBytes),
+		Errors:       sql.NullString{String: string(resultErrorBytes), Valid: true},
 	}
 
 	_, err := s.importLog().Insert(storeImportLog)

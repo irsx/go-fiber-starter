@@ -14,7 +14,7 @@ type UserRepository struct{}
 func (r *UserRepository) filterClauses(pagination *utils.Pagination) (clauses []clause.Expression) {
 	if pagination.Keyword != "" {
 		vars := setKeywordVarsByTotalExpr(pagination.Keyword, 2)
-		query := lowerLikeQuery("name") + " OR " + lowerLikeQuery("national_id")
+		query := lowerLikeQuery("name") + " OR " + lowerLikeQuery("email")
 		clauses = append(clauses, clause.Expr{SQL: query, Vars: vars})
 	}
 
@@ -31,14 +31,6 @@ func (r *UserRepository) GetAll(pagination utils.Pagination) (*utils.Pagination,
 
 	pagination.Rows = transformer.UserListTransformer(users)
 	return &pagination, nil
-}
-
-func (r *UserRepository) FindByNik(nik string) (user models.User, err error) {
-	if err := DB.First(&user, "national_id = ?", nik).Error; err != nil {
-		return user, err
-	}
-
-	return user, nil
 }
 
 func (r *UserRepository) FindByEmail(email string) (user models.User, err error) {
@@ -63,6 +55,14 @@ func (r *UserRepository) Insert(tx *gorm.DB, user models.User) (models.User, err
 	}
 
 	return user, nil
+}
+
+func (r *UserRepository) InsertMany(tx *gorm.DB, users []models.User, batchSize int) error {
+	if err := DB.CreateInBatches(&users, batchSize).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *UserRepository) UpdateByGUID(tx *gorm.DB, guid string, storeData models.User) (models.User, error) {
@@ -90,4 +90,27 @@ func (r *UserRepository) DeleteByGUID(guid string) error {
 	}
 
 	return nil
+}
+
+func (s *UserRepository) IsExist(email string) bool {
+	var user models.User
+	if err := DB.Unscoped().Select("guid").First(&user, "email = ?", email).Error; err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (s *UserRepository) GetListGUID(tx *gorm.DB) []string {
+	var users []models.User
+	usersGUID := make([]string, 0)
+	if err := tx.Select("guid").Find(&users).Error; err != nil {
+		return usersGUID
+	}
+
+	for _, user := range users {
+		usersGUID = append(usersGUID, user.GUID.String())
+	}
+
+	return usersGUID
 }

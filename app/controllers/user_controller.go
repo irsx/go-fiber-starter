@@ -47,3 +47,14 @@ func (c *UserController) Update(ctx *fiber.Ctx) error {
 
 	return c.userService().Update(ctx, guid, *req)
 }
+
+func (c *UserController) Delete(ctx *fiber.Ctx) error {
+	utils.Logger.Info("✅ USER DELETE")
+
+	guid, err := utils.ValidateGUIDParams(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.userService().Delete(ctx, guid)
+}

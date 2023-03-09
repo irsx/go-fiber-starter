@@ -3,10 +3,10 @@ package services
 import (
 	"errors"
 	"go-fiber-starter/app/dto"
-	"go-fiber-starter/app/jobs"
 	"go-fiber-starter/app/models"
 	"go-fiber-starter/app/repository"
 	"go-fiber-starter/app/transformer"
+	"go-fiber-starter/constants"
 	"go-fiber-starter/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -55,8 +55,8 @@ func (s *ProductService) Add(ctx *fiber.Ctx, req dto.ProductRequestDTO) (err err
 		return utils.JsonErrorInternal(ctx, err, "E_PRODUCT_ADD")
 	}
 
-	// send job
-	jobs.ProductStreamJob(product)
+	// SEND JOB
+	utils.SendJobWithDefaultPayloads(constants.QueueNewProduct, product)
 
 	return utils.JsonSuccess(ctx, product)
 }
@@ -83,7 +83,8 @@ func (s *ProductService) Update(ctx *fiber.Ctx, GUID string, req dto.ProductRequ
 	}
 
 	updatedProduct.GUID = product.GUID
-	jobs.ProductStreamJob(updatedProduct)
+	// SEND JOB
+	utils.SendJobWithDefaultPayloads(constants.QueueNewProduct, updatedProduct)
 
 	return utils.JsonSuccess(ctx, updatedProduct)
 }
@@ -93,15 +94,12 @@ func (s *ProductService) Delete(ctx *fiber.Ctx, guid string) error {
 		return utils.JsonErrorInternal(ctx, err, "E_PRODUCT_DELETE")
 	}
 
-	resData := map[string]interface{}{
-		"guid": guid,
-	}
-
-	return utils.JsonSuccess(ctx, resData)
+	return utils.JsonSuccess(ctx, fiber.Map{"guid": guid})
 }
 
 func (s *ProductService) storeFromRequest(Product models.Product, req dto.ProductRequestDTO) models.Product {
 	Product.SKU = req.SKU
+	Product.BarcodeID = req.BarcodeID
 	Product.Name = req.Name
 	Product.Description = req.Description
 	Product.Image = req.ImageUrl

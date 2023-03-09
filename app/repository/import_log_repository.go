@@ -7,8 +7,8 @@ import (
 type ImportLogRepository struct{}
 
 func (r *ImportLogRepository) GetAll() (importLogs []*models.ImportLog, err error) {
-	columns := "guid, source, exec_time, total_success, total_error, created_at, updated_at"
-	if err := DB.Select(columns).Find(&importLogs).Order("created_at DESC").Error; err != nil {
+	columns := "guid, user_guid, exec_time, total_success, total_error, created_at, updated_at"
+	if err := DB.Select(columns).Find(&importLogs).Order("updated_at DESC").Error; err != nil {
 		return nil, err
 	}
 

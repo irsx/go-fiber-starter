@@ -3,7 +3,6 @@ package middlewares
 import (
 	"errors"
 	"go-fiber-starter/utils"
-	"log"
 	"os"
 	"strings"
 
@@ -41,7 +40,6 @@ func JwtMiddleware(ctx *fiber.Ctx) error {
 	}
 
 	// verify token
-	log.Println("auth token :", authorizationToken)
 	jwtToken, err := jwt.ParseWithClaims(authorizationToken, &JwtCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
@@ -66,6 +64,6 @@ func whiteListRoutes() []SkipperRoutesData {
 	return []SkipperRoutesData{
 		{"POST", "/api/auth/login"},
 		{"POST", "/api/auth/register"},
-		{"GET", "/api/import/products/events"},
+		{"GET", "/api/import/products/stream"},
 	}
 }

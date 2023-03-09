@@ -13,10 +13,6 @@ func (req *UserRequestDTO) Validate() error {
 	return utils.ExtractValidationError(req)
 }
 
-type UserParamsDTO struct {
-	Status string `query:"status"`
-}
-
 type UserRegisterConsumerDTO struct {
 	UserGUID    string `mapstructure:"userGUID"`
 	Name        string `mapstructure:"name"`

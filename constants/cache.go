@@ -1,6 +1,6 @@
 package constants
 
 const (
-	CacheProductList   = "PRODUCT_LIST"
-	CacheProductDetail = "PRODUCT_DETAIL"
+	CacheNewsList   = "NEWS_LIST"
+	CacheNewsDetail = "NEWS_DETAIL"
 )

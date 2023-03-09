@@ -48,6 +48,14 @@ func (r *ProductRepository) Insert(tx *gorm.DB, Product models.Product) (models.
 	return Product, nil
 }
 
+func (r *ProductRepository) InsertMany(tx *gorm.DB, products []models.Product, batchSize int) error {
+	if err := DB.CreateInBatches(&products, batchSize).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *ProductRepository) UpdateByGUID(tx *gorm.DB, guid string, storeData models.Product) (models.Product, error) {
 	var Product models.Product
 	if err := tx.Model(&Product).Where("guid = ?", guid).Updates(&storeData).Error; err != nil {
@@ -68,7 +76,7 @@ func (r *ProductRepository) DeleteByGUID(guid string) error {
 
 func (s *ProductRepository) IsExist(SKU string, GUID string) bool {
 	var product models.Product
-	if err := DB.First(&product, "sku = ?", SKU).Error; err != nil {
+	if err := DB.Unscoped().Select("guid").First(&product, "sku = ?", SKU).Error; err != nil {
 		return false
 	}
 

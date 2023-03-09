@@ -3,7 +3,6 @@ package configs
 import (
 	"errors"
 	"fmt"
-	"go-fiber-starter/app/models"
 	"go-fiber-starter/utils"
 	"log"
 	"os"
@@ -52,7 +51,7 @@ func (c *Config) GormDatabase() {
 
 	if err != nil {
 		utils.Logger.Error("GORM Error : " + err.Error())
-		panic("Failed to connect to Config")
+		log.Fatal("Open database connection failed")
 	}
 
 	sqlDB, err := dbInstance.DB()
@@ -71,17 +70,4 @@ func (c *Config) GormDatabase() {
 	sqlDB.SetConnMaxIdleTime(time.Duration(maxConnLifetime) * time.Hour)
 
 	DB = dbInstance
-}
-
-func (c *Config) GormMigrate() {
-	err := DB.AutoMigrate(
-		&models.User{},
-		&models.Product{},
-		&models.ImportLog{},
-	)
-
-	if err != nil {
-		utils.Logger.Error("Migrate error: " + err.Error())
-		panic("database migrate failed")
-	}
 }

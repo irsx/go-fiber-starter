@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"go-fiber-starter/utils"
 	"io"
@@ -23,38 +22,7 @@ type CDNResponse struct {
 	Imageurl string `json:"imageurl"`
 }
 
-func (s *UploadService) SendCallback(ctx *fiber.Ctx, payloads interface{}) error {
-	type PipedreamResponse struct {
-		Success bool `json:"success"`
-	}
-
-	callbackUrl := os.Getenv("CALLBACK_URL")
-	if callbackUrl == "" {
-		return utils.JsonErrorEnvironment(ctx, "CALLBACK_URL")
-	}
-
-	utils.Logger.Info("🔥 h2h url : " + callbackUrl + "/callback")
-	body, _ := json.Marshal(payloads)
-	RestClient := utils.RestClient{
-		Url:             callbackUrl + "/callback",
-		Method:          fiber.MethodPost,
-		Headers:         nil,
-		Payload:         body,
-		ResponseSuccess: &PipedreamResponse{},
-		ResponseError:   &PipedreamResponse{},
-		ErrorPrefix:     "CALLBACK",
-		LogRequest:      true,
-	}
-
-	clientResp, err := RestClient.Send(ctx)
-	if err != nil {
-		return err
-	}
-
-	return utils.JsonSuccess(ctx, clientResp)
-}
-
-func (s *UploadService) UploadToCDN(ctx *fiber.Ctx, imagePath string) (resp CDNResponse, err error) {
+func (s *UploadService) UploadToCDN(ctx *fiber.Ctx, imagePath string) (resp *CDNResponse, err error) {
 	cdnUrl := os.Getenv("CDN_URL")
 	if cdnUrl == "" {
 		return resp, utils.JsonErrorEnvironment(ctx, "CDN_URL")
@@ -66,14 +34,14 @@ func (s *UploadService) UploadToCDN(ctx *fiber.Ctx, imagePath string) (resp CDNR
 		return resp, utils.JsonErrorInternal(ctx, err, "E_CDN_CONTENT_TYPE")
 	}
 
-	var headers []utils.RestClientHeaders
-	headers = append(headers, utils.RestClientHeaders{
+	var headers []utils.HttpClientHeaders
+	headers = append(headers, utils.HttpClientHeaders{
 		Key:   "Content-Type",
 		Value: contentType,
 	})
 
 	utils.Logger.Info("🔥 h2h url : " + cdnUrl)
-	RestClient := utils.RestClient{
+	HttpClient := utils.HttpClient{
 		Url:             cdnUrl,
 		Method:          fiber.MethodPost,
 		Headers:         headers,
@@ -84,13 +52,13 @@ func (s *UploadService) UploadToCDN(ctx *fiber.Ctx, imagePath string) (resp CDNR
 		LogRequest:      false,
 	}
 
-	clientResp, err := RestClient.Send(ctx)
+	clientResp, err := HttpClient.Send(ctx)
 	os.Remove(imagePath) // remove uploaded image before return
 	if err != nil {
 		return resp, utils.JsonErrorInternal(ctx, err, "E_CDN_CLIENT")
 	}
 
-	return clientResp.(CDNResponse), nil
+	return clientResp.(*CDNResponse), nil
 }
 
 func (s *UploadService) customCDNContentType(key string, path string) (bodyByte []byte, contentType string, err error) {

@@ -1,0 +1,11 @@
+development:
+    dialect: postgres
+    datasource: host=127.0.0.1 port=55000 dbname=starter user=postgres password=postgrespw sslmode=disable
+    dir: database/migrations
+    table: migrations
+
+production:
+    dialect: postgres
+    datasource: host=${DB_HOST} port={DB_PORT} dbname={DB_NAME} user=${DB_USER} password=${DB_PASSWORD} sslmode=required
+    dir: database/migrations
+    table: migrations

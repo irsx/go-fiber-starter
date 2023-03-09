@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go-fiber-starter/constants"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-type RestClient struct {
+type HttpClient struct {
 	Url             string
 	Method          string
-	Headers         []RestClientHeaders
+	Headers         []HttpClientHeaders
 	Payload         []byte
 	Args            *fiber.Args
 	ResponseSuccess interface{}
@@ -22,17 +21,18 @@ type RestClient struct {
 	LogResponse     bool
 }
 
-type RestClientHeaders struct {
+type HttpClientHeaders struct {
 	Key   string
 	Value string
 }
 
+const USER_AGENT = "irsx"
 const JSON_CONTENT_TYPE = "application/json"
 
-func (hc *RestClient) Send(ctx *fiber.Ctx) (interface{}, error) {
+func (hc *HttpClient) Send(ctx *fiber.Ctx) (interface{}, error) {
 	// setup user agent
 	client := fiber.AcquireAgent()
-	client.UserAgent(constants.UserAgent)
+	client.UserAgent(USER_AGENT)
 
 	// setup request
 	clientReq := client.Request()
@@ -108,22 +108,22 @@ func extractResponseErrors(errors []error) string {
 	return message
 }
 
-func ContentTypeFormHeader() RestClientHeaders {
-	return RestClientHeaders{
+func ContentTypeFormHeader() HttpClientHeaders {
+	return HttpClientHeaders{
 		Key:   "Content-Type",
 		Value: "application/x-www-form-urlencoded",
 	}
 }
 
-func AuthorizationHeader(token string) RestClientHeaders {
-	return RestClientHeaders{
+func AuthorizationHeader(token string) HttpClientHeaders {
+	return HttpClientHeaders{
 		Key:   "Authorization",
 		Value: "Bearer " + token,
 	}
 }
 
-func JsonContentTypeHeader() RestClientHeaders {
-	return RestClientHeaders{
+func JsonContentTypeHeader() HttpClientHeaders {
+	return HttpClientHeaders{
 		Key:   "Content-Type",
 		Value: JSON_CONTENT_TYPE,
 	}

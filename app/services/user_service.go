@@ -3,9 +3,9 @@ package services
 import (
 	"encoding/json"
 	"go-fiber-starter/app/dto"
-	"go-fiber-starter/app/jobs"
 	"go-fiber-starter/app/models"
 	"go-fiber-starter/app/repository"
+	"go-fiber-starter/constants"
 	"go-fiber-starter/utils"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,13 +33,18 @@ func (s *UserService) Add(ctx *fiber.Ctx, req dto.UserRequestDTO) (err error) {
 		return utils.JsonErrorValidation(ctx, err)
 	}
 
+	userRepo := s.userRepo()
+	if userRepo.IsExist(req.Email) {
+		return utils.JsonErrorValidation(ctx, constants.ErrEmailExist)
+	}
+
 	storeData := s.StoreFromRequest(models.User{}, req)
-	user, err := s.userRepo().Insert(repository.DB, storeData)
+	user, err := userRepo.Insert(repository.DB, storeData)
 	if err != nil {
 		return utils.JsonErrorInternal(ctx, err, "E_USER_ADD")
 	}
 
-	return utils.JsonSuccess(ctx, user)
+	return utils.JsonSuccess(ctx, fiber.Map{"guid": user.GUID.String()})
 }
 
 func (s *UserService) Update(ctx *fiber.Ctx, guid string, req dto.UserRequestDTO) (err error) {
@@ -53,12 +58,20 @@ func (s *UserService) Update(ctx *fiber.Ctx, guid string, req dto.UserRequestDTO
 	}
 
 	storeData := s.StoreFromRequest(user, req)
-	updatedUser, err := s.userRepo().UpdateByGUID(repository.DB, guid, storeData)
+	_, err = s.userRepo().UpdateByGUID(repository.DB, guid, storeData)
 	if err != nil {
 		return utils.JsonErrorInternal(ctx, err, "E_USER_UPDATE")
 	}
 
-	return utils.JsonSuccess(ctx, updatedUser)
+	return utils.JsonSuccess(ctx, fiber.Map{"guid": guid})
+}
+
+func (s *UserService) Delete(ctx *fiber.Ctx, guid string) error {
+	if err := s.userRepo().DeleteByGUID(guid); err != nil {
+		return utils.JsonErrorInternal(ctx, err, "E_USER_DELETE")
+	}
+
+	return utils.JsonSuccess(ctx, fiber.Map{"guid": guid})
 }
 
 func (s *UserService) StoreFromRequest(user models.User, req dto.UserRequestDTO) models.User {
@@ -80,7 +93,7 @@ func (s *UserService) StoreFromRequest(user models.User, req dto.UserRequestDTO)
 func (s *UserService) UpdateUserFromConsumer(data []byte) error {
 	var UserRegisterConsumerDTO dto.UserRegisterConsumerDTO
 
-	payload := &jobs.DefaultJobPayloads{}
+	payload := &utils.DefaultJobPayloads{}
 	json.Unmarshal(data, &payload)
 
 	if err := mapstructure.Decode(payload.Data, &UserRegisterConsumerDTO); err != nil {

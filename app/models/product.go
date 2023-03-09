@@ -1,7 +1,7 @@
 package models
 
 import (
-	"encoding/json"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,31 +10,22 @@ import (
 
 type Product struct {
 	GUID        uuid.UUID      `json:"guid" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	SKU         string         `json:"sku" gorm:"type:varchar;uniqueIndex:idx_unique_product"`
-	Name        string         `json:"name" gorm:"type:varchar"`
+	UserGUID    string         `json:"user_guid" gorm:"type:uuid"`
+	SKU         string         `json:"sku" gorm:"uniqueIndex:product_ukey"`
+	BarcodeID   string         `json:"barcode_id"`
+	Name        string         `json:"name"`
 	Description string         `json:"description"`
-	Image       string         `json:"image" gorm:"type:varchar"`
-	Stock       int            `json:"stock" gorm:"type:integer;default:0"`
+	Image       string         `json:"image"`
+	Stock       int            `json:"stock"`
 	SellPrice   float64        `json:"sell_price"`
 	BuyPrice    float64        `json:"buy_price"`
-	ExpiredAt   *string        `json:"expired_at" gorm:"type:date;default:null"`
+	ExpiredAt   sql.NullTime   `json:"expired_at"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `json:"deleted_at"`
+	User        User           `json:"-"`
 }
 
 func (m *Product) TableName() string {
 	return "product"
-}
-
-func (m *Product) GetImages() []string {
-	var images = make([]string, 0)
-	if m.Image != "" {
-		json.Unmarshal([]byte(m.Image), &images)
-
-		return images
-	}
-
-	images[0] = ""
-	return images
 }

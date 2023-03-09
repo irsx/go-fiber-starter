@@ -6,5 +6,4 @@ func Setup() {
 	config := Config{}
 	config.GormDatabase()
 	config.RedisConfig()
-	config.GormMigrate()
 }

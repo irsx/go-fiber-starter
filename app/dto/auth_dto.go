@@ -18,7 +18,7 @@ type RegisterRequestDTO struct {
 	FirstName   string `json:"first_name" validate:"required"`
 	LastName    string `json:"last_name" validate:"required"`
 	Password    string `json:"password" validate:"required"`
-	PhoneNumber string `json:"phone_number" validate:"required"`
+	PhoneNumber string `json:"phone_number"`
 }
 
 func (req *RegisterRequestDTO) Validate() error {

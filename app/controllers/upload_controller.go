@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"encoding/json"
 	"go-fiber-starter/app/services"
 	"go-fiber-starter/utils"
 
@@ -32,14 +31,5 @@ func (c *UploadController) CDN(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	return utils.JsonSuccess(ctx, response)
-}
-
-func (c *UploadController) Callback(ctx *fiber.Ctx) error {
-	utils.Logger.Info("✅ SEND CALLBACK")
-
-	var payloads map[string]interface{}
-	json.Unmarshal(ctx.Body(), &payloads)
-
-	return c.uploadService().SendCallback(ctx, payloads)
+	return utils.JsonSuccess(ctx, &response)
 }

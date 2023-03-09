@@ -40,6 +40,7 @@ func (c *ProductController) Add(ctx *fiber.Ctx) error {
 		return utils.JsonErrorValidation(ctx, err)
 	}
 
+	req.UserGUID = ctx.Locals("user_auth").(string)
 	return c.productService().Add(ctx, *req)
 }
 
@@ -56,6 +57,7 @@ func (c *ProductController) Update(ctx *fiber.Ctx) error {
 		return utils.JsonErrorValidation(ctx, err)
 	}
 
+	req.UserGUID = ctx.Locals("user_auth").(string)
 	return c.productService().Update(ctx, guid, *req)
 }
 
@@ -67,5 +69,5 @@ func (c *ProductController) Delete(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	return c.productService().Delete(ctx, guid)
+	return utils.JsonSuccess(ctx, fiber.Map{"guid": guid})
 }

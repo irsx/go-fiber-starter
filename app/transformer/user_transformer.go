@@ -3,6 +3,7 @@ package transformer
 import (
 	"encoding/json"
 	"go-fiber-starter/app/models"
+	"go-fiber-starter/constants"
 )
 
 type UserResponse struct {
@@ -25,8 +26,8 @@ func UserListTransformer(user []*models.User) (rows []UserResponse) {
 			Name:        row.Name,
 			Email:       row.Email,
 			PhoneNumber: row.PhoneNumber,
-			CreatedAt:   row.CreatedAt.String(),
-			UpdatedAt:   row.UpdatedAt.String(),
+			CreatedAt:   row.CreatedAt.Format(constants.TimestampFormat),
+			UpdatedAt:   row.UpdatedAt.Format(constants.TimestampFormat),
 		}
 		rows = append(rows, mapResponse)
 	}

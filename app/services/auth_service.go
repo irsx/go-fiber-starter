@@ -54,8 +54,13 @@ func (s *AuthService) Register(ctx *fiber.Ctx, req dto.RegisterRequestDTO) error
 		return utils.JsonErrorValidation(ctx, err)
 	}
 
+	userRepo := s.userRepo()
+	if userRepo.IsExist(req.Email) {
+		return utils.JsonErrorValidation(ctx, constants.ErrEmailExist)
+	}
+
 	storeUser := s.storeUser(req)
-	user, err := s.userRepo().Insert(repository.DB, storeUser)
+	user, err := userRepo.Insert(repository.DB, storeUser)
 	if err != nil {
 		return utils.JsonErrorInternal(ctx, err, "E_USER_CREATE")
 	}
