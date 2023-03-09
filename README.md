@@ -42,6 +42,7 @@ Simple and scalable starter kit to build powerful and organized REST projects wi
 -   [x] RabbitMQ Consumer & Publisher
 -   [x] Server Side Event (SSE)
 -   [x] ORM Database
+-   [x] SQL Migration & Seeders
 -   [x] Custom REST Client
 -   [x] Image upload to CDN
 -   [x] Excel Importer
@@ -56,6 +57,7 @@ The following tools were used in this project:
 -   [Go](https://go.dev)
 -   [Fiber](https://github.com/gofiber/fiber)
 -   [Gorm](https://gorm.io)
+-   [SQLMigrate](https://github.com/rubenv/sql-migrate)
 -   [Zaplog](https://github.com/uber-go/zap)
 -   [Air](https://github.com/cosmtrek/air)
 -   [PostgreSQL](https://www.postgresql.org)
@@ -79,6 +81,9 @@ $ go get
 
 # Run the project
 $ go run main.go
+
+# Run migrations and seeders
+$ go run main.go --rollback --seed
 
 # Run the project with live reloading
 $ air
