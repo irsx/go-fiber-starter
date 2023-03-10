@@ -1,6 +1,6 @@
 module go-fiber-starter
 
-go 1.18
+go 1.20
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.20.1

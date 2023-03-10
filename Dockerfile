@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine
+FROM golang:1.20-alpine
 
 # Set necessary environmet variables needed for our image
 ENV GO111MODULE=on \
